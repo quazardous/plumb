@@ -82,6 +82,8 @@ when@test:
 | `'@id'` | the service `id` (or what the alias `id` points to) |
 | `'@?id'` | the service, or `None` when it is not declared |
 | `!tagged_iterator tag` | the list of the services carrying `tag` |
+| `!tagged_locator {tag: t, index_by: key}` | a lazy registry (`ServiceLocator`) of the services carrying `t`, keyed by the tag attribute `key` (by id with `!tagged_locator t`); nothing is built until asked |
+| `!service_closure '@id'` | a callable building or returning the service when called: `make(account="fr")` is `get("id", account="fr")` |
 | `'%%'`, `'@@'` | a literal `%`, a literal `@` |
 
 ### A service
@@ -105,6 +107,7 @@ container.param("api.url")
 container.tagged("orders_source", version="v1")    # ids, filtered by tag attributes
 container.tagged_items("orders_source")            # [(id, attributes)]
 container.target("app.orders.v1")                  # its class (or factory), without building it
+container.locator("job", index_by="key")           # what !tagged_locator injects
 with container.override("app.transport", fake):    # tests
     ...
 ```
@@ -117,6 +120,20 @@ A typical pattern is choosing an implementation from configuration with tags:
 (sid,) = container.tagged("orders_source", version=container.param("orders.api"))
 source = container.get(sid, account="fr")
 ```
+
+A registry of handlers, and a way to build a service later, are injected rather than fetched from the
+container:
+
+```yaml
+app.scheduler:
+  class: app.jobs.Scheduler
+  arguments:
+    jobs: !tagged_locator { tag: job, index_by: key }       # jobs["orders.import"], jobs.attributes(…)
+    make_orders: !service_closure '@app.orders.v1'          # make_orders(account="fr")
+```
+
+Both are lazy, so they also break a circular reference between two services. A missing service, a tag
+without the `index_by` attribute and a key given twice are compile errors.
 
 ## Compile errors
 
@@ -139,12 +156,13 @@ check command): a bad file stops the start, not a request at 3 a.m.
 | `services.yaml`, `imports`, `parameters`, `when@env` | same |
 | `%param%`, `%env(VAR)%`, `env(VAR)` default parameter | same |
 | `@service`, `@?service`, `!tagged_iterator` | same |
+| `!tagged_locator {tag, index_by}`, `!service_closure` | same; a closure passes on its `runtime:` arguments, and the locator also gives tag attributes and classes without building |
 | `_defaults: autowire`, alias of an interface | same; types are Python type hints |
 | `factory: [@service, method]` | same; also a dotted callable |
 | `shared: false` | same |
 | — | `runtime:` arguments given to `get()` |
 | compiled container | `compile()` checks everything; services are still built lazily |
-| `bind`, `calls`, `decorates`, `public`, service locators, expression language | not (yet) |
+| `bind`, `calls`, `decorates`, `public`, expression language | not (yet) |
 
 ## Development
 

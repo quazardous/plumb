@@ -45,6 +45,19 @@ services:
     factory: ['@app.greeter_factory', create]
     arguments: [world]
 
+  app.job.import:
+    class: sample.app.Job
+    arguments: [import]
+    tags: [{ name: job, key: orders.import, every: 600 }]
+  app.job.route:
+    class: sample.app.Built
+    tags: [{ name: job, key: journal.route }]
+  app.runner:
+    class: sample.app.Runner
+    arguments:
+      jobs: !tagged_locator { tag: job, index_by: key }
+      make_orders: !service_closure '@app.orders.v1'
+
 when@test:
   services:
     app.transport: { class: sample.app.FakeTransport }

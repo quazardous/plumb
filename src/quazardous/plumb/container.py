@@ -11,7 +11,16 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
-from quazardous.plumb.definition import Definition, Document, Tagged, load_file, merge, parse
+from quazardous.plumb.definition import (
+    Definition,
+    Document,
+    ServiceClosure,
+    Tagged,
+    TaggedLocator,
+    load_file,
+    merge,
+    parse,
+)
 from quazardous.plumb.errors import (
     CircularReference,
     CompileError,
@@ -19,6 +28,7 @@ from quazardous.plumb.errors import (
     ParameterNotFound,
     ServiceNotFound,
 )
+from quazardous.plumb.locator import ServiceLocator
 
 _WHOLE = re.compile(r"^%([^%\s]+)%$")
 _EMBEDDED = re.compile(r"%%|%([^%\s]+)%")
@@ -184,6 +194,11 @@ class Container:
                     out.append((sid, {k: v for k, v in t.items() if k != "name"}))
         return out
 
+    def locator(self, tag: str, index_by: str | None = None) -> ServiceLocator:
+        """The services carrying ``tag``, keyed by the tag attribute ``index_by`` (by id without it), built
+        only when asked: what ``!tagged_locator`` injects."""
+        return ServiceLocator(self, tag, self._locator_index(TaggedLocator(tag, index_by)))
+
     @contextmanager
     def override(self, sid: str, obj: Any) -> Iterator[Any]:
         """Replace a service for the time of a ``with`` block (tests)."""
@@ -195,6 +210,22 @@ class Container:
             del self._overrides[sid]
 
     # ---- internals -------------------------------------------------------------------------------
+    def _locator_index(self, loc: TaggedLocator) -> dict[str, tuple[str, dict]]:
+        index: dict[str, tuple[str, dict]] = {}
+        for sid, attrs in self.tagged_items(loc.tag):
+            if loc.index_by is None:
+                key = sid
+            elif loc.index_by in attrs:
+                key = str(attrs[loc.index_by])
+            else:
+                raise DefinitionError(f"!tagged_locator {loc.tag}: service {sid!r} has no {loc.index_by!r} "
+                                      "attribute on its tag")
+            if key in index:
+                raise DefinitionError(f"!tagged_locator {loc.tag}: key {key!r} given by both "
+                                      f"{index[key][0]!r} and {sid!r}")
+            index[key] = (sid, attrs)
+        return index
+
     def _real_id(self, sid: str, _seen: tuple = ()) -> str:
         d = self._defs.get(sid)
         if d is None:
@@ -230,6 +261,12 @@ class Container:
 
     def _check_value(self, v: Any) -> None:
         if isinstance(v, Tagged):
+            return
+        if isinstance(v, ServiceClosure):
+            self._real_id(v.id)
+            return
+        if isinstance(v, TaggedLocator):
+            self._locator_index(v)
             return
         if isinstance(v, str) and v.startswith("@") and not v.startswith("@@"):
             if not v.startswith("@?"):
@@ -334,6 +371,11 @@ class Container:
     def _value(self, v: Any) -> Any:
         if isinstance(v, Tagged):
             return [self.get(sid) for sid in self.tagged(v.tag)]
+        if isinstance(v, TaggedLocator):
+            return ServiceLocator(self, v.tag, self._locator_index(v))
+        if isinstance(v, ServiceClosure):
+            sid = v.id
+            return lambda **runtime: self.get(sid, **runtime)
         if isinstance(v, str) and v.startswith("@@"):
             return v[1:]
         if isinstance(v, str) and v.startswith("@?"):

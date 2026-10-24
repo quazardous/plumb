@@ -65,3 +65,22 @@ class Factory:
 
     def create(self, name: str) -> str:
         return self.prefix + name
+
+
+class Job:
+    def __init__(self, label: str):
+        self.label = label
+
+
+class Runner:
+    """Receives a locator of jobs and a closure making orders sources, builds nothing up front."""
+
+    def __init__(self, jobs, make_orders):
+        self.jobs, self.make_orders = jobs, make_orders
+
+
+class Built:
+    count = 0
+
+    def __init__(self):
+        Built.count += 1

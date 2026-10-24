@@ -4,6 +4,14 @@ All notable changes to this project are documented here: what changed for a user
 
 ## [Unreleased]
 
+## [0.3.0]
+
+- `!tagged_locator {tag, index_by}`: inject a lazy registry of tagged services, keyed by a tag attribute;
+  it also gives each one's tag attributes and class without building it. `Container.locator()` is the
+  same from code.
+- `!service_closure '@id'`: inject a callable that builds the service when called, with its runtime
+  arguments (an endpoint per account, for instance); overrides apply at call time.
+
 ## [0.2.1]
 
 - Published on PyPI as `plumb-q` (`pip install plumb-q`).

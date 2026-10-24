@@ -9,7 +9,7 @@ before anything runs.
     orders = container.get("app.orders", account="fr")
 """
 from quazardous.plumb.container import Container, ContainerBuilder
-from quazardous.plumb.definition import Tagged
+from quazardous.plumb.definition import ServiceClosure, Tagged, TaggedLocator
 from quazardous.plumb.errors import (
     CircularReference,
     CompileError,
@@ -18,8 +18,10 @@ from quazardous.plumb.errors import (
     PlumbError,
     ServiceNotFound,
 )
+from quazardous.plumb.locator import ServiceLocator
 
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 
 __all__ = ["CircularReference", "CompileError", "Container", "ContainerBuilder", "DefinitionError",
-           "ParameterNotFound", "PlumbError", "ServiceNotFound", "Tagged", "__version__"]
+           "ParameterNotFound", "PlumbError", "ServiceClosure", "ServiceLocator", "ServiceNotFound", "Tagged",
+           "TaggedLocator", "__version__"]

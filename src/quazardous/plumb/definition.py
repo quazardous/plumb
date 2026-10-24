@@ -19,6 +19,21 @@ class Tagged:
     tag: str
 
 
+@dataclass(frozen=True)
+class TaggedLocator:
+    """``!tagged_locator <tag>`` or ``!tagged_locator {tag: <tag>, index_by: <attribute>}``: a lazy
+    registry of the services carrying this tag, keyed by the tag attribute ``index_by`` (by id without it)."""
+    tag: str
+    index_by: str | None = None
+
+
+@dataclass(frozen=True)
+class ServiceClosure:
+    """``!service_closure '@id'``: a callable that builds or returns the service when called, with its
+    runtime arguments: ``make(account="fr")`` is ``container.get(id, account="fr")``."""
+    id: str
+
+
 @dataclass
 class Definition:
     id: str
@@ -41,7 +56,30 @@ def _tagged_iterator(loader: _Loader, node: yaml.Node) -> Tagged:
     return Tagged(str(loader.construct_scalar(node)))  # type: ignore[arg-type]
 
 
+def _tagged_locator(loader: _Loader, node: yaml.Node) -> TaggedLocator:
+    if isinstance(node, yaml.ScalarNode):
+        return TaggedLocator(str(loader.construct_scalar(node)))
+    if isinstance(node, yaml.MappingNode):
+        spec = loader.construct_mapping(node)
+        if "tag" not in spec or set(spec) - {"tag", "index_by"}:
+            raise yaml.constructor.ConstructorError(None, None, "!tagged_locator takes {tag, index_by}",
+                                                    node.start_mark)
+        index_by = spec.get("index_by")
+        return TaggedLocator(str(spec["tag"]), None if index_by is None else str(index_by))
+    raise yaml.constructor.ConstructorError(None, None, "!tagged_locator takes a tag or {tag, index_by}",
+                                            node.start_mark)
+
+
+def _service_closure(loader: _Loader, node: yaml.Node) -> ServiceClosure:
+    value = str(loader.construct_scalar(node))  # type: ignore[arg-type]
+    if not value.startswith("@") or value.startswith(("@@", "@?")):
+        raise yaml.constructor.ConstructorError(None, None, "!service_closure takes '@id'", node.start_mark)
+    return ServiceClosure(value[1:])
+
+
 _Loader.add_constructor("!tagged_iterator", _tagged_iterator)
+_Loader.add_constructor("!tagged_locator", _tagged_locator)
+_Loader.add_constructor("!service_closure", _service_closure)
 
 
 @dataclass

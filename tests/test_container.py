@@ -157,3 +157,58 @@ def test_target_gives_the_class_without_building():
     assert c.target("sample.app.Transport") is HttpTransport          # through the alias
     assert c.target("app.greeting").__name__ == "make_greeting"
     assert c.target("app.greeting2") is None                          # a method of another service
+
+
+def test_tagged_locator_is_lazy_and_keyed_by_a_tag_attribute():
+    from sample.app import Built, Job
+    Built.count = 0
+    c = build()
+    jobs = c.get("app.runner").jobs
+    assert sorted(jobs) == ["journal.route", "orders.import"] and len(jobs) == 2 and "orders.import" in jobs
+    assert jobs.attributes("orders.import") == {"key": "orders.import", "every": 600}
+    assert jobs.target("journal.route") is Built and Built.count == 0     # nothing built yet
+    assert isinstance(jobs["orders.import"], Job) and jobs["orders.import"] is c.get("app.job.import")
+    assert Built.count == 0
+    with pytest.raises(KeyError, match="journal.route, orders.import|orders.import, journal.route"):
+        jobs["nope"]
+    by_id = c.locator("normalizer")
+    assert by_id.keys() == ["app.normalizer.v0", "app.normalizer.v1"]
+    assert c.locator("orders_source", index_by="version").get("v0", account="fr").account == "fr"
+
+
+def test_service_closure_builds_with_runtime_arguments_and_sees_overrides():
+    c = build()
+    make = c.get("app.runner").make_orders
+    a, b = make(account="fr"), make(account="de")
+    assert type(a) is Orders and (a.account, b.account) == ("fr", "de")
+    fake = object()
+    with c.override("app.orders.v1", fake):
+        assert make(account="fr") is fake
+
+
+def test_locator_and_closure_mistakes_are_compile_errors(tmp_path):
+    import yaml
+
+    from quazardous.plumb.definition import _Loader
+
+    def compile_problems(text):
+        with pytest.raises(CompileError) as e:
+            ContainerBuilder().load_dict(yaml.load(text, Loader=_Loader)).compile()  # noqa: S506
+        return "\n".join(e.value.problems)
+
+    jobs = """
+services:
+  a: { class: sample.app.Job, arguments: [x], tags: [{ name: job, key: k }] }
+  b: { class: sample.app.Job, arguments: [y], tags: [%s] }
+  r: { class: sample.app.Registry, arguments: [!tagged_locator { tag: job, index_by: key }] }
+  s: { class: sample.app.Registry, arguments: [!service_closure '@ghost'] }
+"""
+    text = compile_problems(jobs % "{ name: job, key: k }")
+    assert "r: DefinitionError: !tagged_locator job: key 'k' given by both 'a' and 'b'" in text
+    assert "s: ServiceNotFound: no service 'ghost'" in text
+    assert "service 'b' has no 'key' attribute" in compile_problems(jobs % "job")
+    for bad, message in (("!service_closure ghost", "takes '@id'"), ("!tagged_locator {index_by: k}", "tag, index_by")):
+        f = tmp_path / "bad.yaml"
+        f.write_text(f"services: {{x: {{arguments: [{bad}]}}}}")
+        with pytest.raises(DefinitionError, match=message):
+            ContainerBuilder().load(f)
