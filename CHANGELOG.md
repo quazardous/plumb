@@ -4,6 +4,11 @@ All notable changes to this project are documented here: what changed for a user
 
 ## [Unreleased]
 
+## [0.3.1]
+
+- `Container.override()` nests: leaving an inner override of a service brings back the outer one
+  (it used to fail with a `KeyError`).
+
 ## [0.3.0]
 
 - `!tagged_locator {tag, index_by}`: inject a lazy registry of tagged services, keyed by a tag attribute;

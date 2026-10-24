@@ -75,6 +75,14 @@ def test_when_env_overrides_and_override_in_a_test():
     with c.override("sample.app.Transport", fake):              # through the alias
         assert c.get("app.orders.v1", account="fr").transport is fake
     assert c.get("app.transport") is not fake
+    inner = FakeTransport()
+    with c.override("app.transport", fake), c.override("app.transport", inner):
+        assert c.get("app.transport") is inner
+    with c.override("app.transport", fake):
+        with c.override("app.transport", inner):
+            pass
+        assert c.get("app.transport") is fake                     # the outer override is back
+    assert c.get("app.transport") is not fake
 
 
 def test_compile_reports_every_problem_at_once():

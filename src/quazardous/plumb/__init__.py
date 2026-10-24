@@ -20,7 +20,7 @@ from quazardous.plumb.errors import (
 )
 from quazardous.plumb.locator import ServiceLocator
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 
 __all__ = ["CircularReference", "CompileError", "Container", "ContainerBuilder", "DefinitionError",
            "ParameterNotFound", "PlumbError", "ServiceClosure", "ServiceLocator", "ServiceNotFound", "Tagged",

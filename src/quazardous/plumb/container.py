@@ -201,13 +201,18 @@ class Container:
 
     @contextmanager
     def override(self, sid: str, obj: Any) -> Iterator[Any]:
-        """Replace a service for the time of a ``with`` block (tests)."""
+        """Replace a service for the time of a ``with`` block (tests); overrides nest."""
         sid = self._real_id(sid)
+        missing = object()
+        previous = self._overrides.get(sid, missing)
         self._overrides[sid] = obj
         try:
             yield obj
         finally:
-            del self._overrides[sid]
+            if previous is missing:
+                del self._overrides[sid]
+            else:
+                self._overrides[sid] = previous
 
     # ---- internals -------------------------------------------------------------------------------
     def _locator_index(self, loc: TaggedLocator) -> dict[str, tuple[str, dict]]:
