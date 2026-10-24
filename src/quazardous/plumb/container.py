@@ -166,6 +166,12 @@ class Container:
             self._instances[sid] = obj
         return obj
 
+    def target(self, sid: str) -> Any:
+        """What the service is built from: its class, or its factory callable (aliases followed), without
+        building it; ``None`` for a synthetic service or a factory method of another service. Lets an
+        application pick a class by tag (for instance to call a classmethod) before any instance exists."""
+        return self._targets.get(self._real_id(sid))
+
     def tagged(self, tag: str, **attrs: Any) -> list[str]:
         """The ids of the services carrying ``tag`` whose attributes match ``attrs``, in declaration order."""
         return [sid for sid, _ in self.tagged_items(tag, **attrs)]

@@ -96,6 +96,7 @@ container.get("id", **runtime)                     # build or reuse
 container.param("api.url")
 container.tagged("orders_source", version="v1")    # ids, filtered by tag attributes
 container.tagged_items("orders_source")            # [(id, attributes)]
+container.target("app.orders.v1")                  # its class (or factory), without building it
 with container.override("app.transport", fake):    # tests
     ...
 ```

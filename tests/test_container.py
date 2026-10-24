@@ -149,3 +149,11 @@ def test_lookup_errors():
     with pytest.raises(CompileError, match="parameter loop"):
         loop.compile()
     assert issubclass(CircularReference, Exception)
+
+
+def test_target_gives_the_class_without_building():
+    c = build()
+    assert c.target("app.orders.v0") is OrdersV0
+    assert c.target("sample.app.Transport") is HttpTransport          # through the alias
+    assert c.target("app.greeting").__name__ == "make_greeting"
+    assert c.target("app.greeting2") is None                          # a method of another service

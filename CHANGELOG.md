@@ -4,6 +4,11 @@ All notable changes to this project are documented here: what changed for a user
 
 ## [Unreleased]
 
+## [0.2.0]
+
+- `Container.target(id)` gives what a service is built from (its class or factory), without building it:
+  pick a class by tag, then call one of its classmethods.
+
 ## [0.1.0]
 
 - First release: services declared in YAML (`imports`, `parameters`, `services`, `when@<env>`), tied to
