@@ -19,7 +19,7 @@ from quazardous.plumb.errors import (
     ServiceNotFound,
 )
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 __all__ = ["CircularReference", "CompileError", "Container", "ContainerBuilder", "DefinitionError",
            "ParameterNotFound", "PlumbError", "ServiceNotFound", "Tagged", "__version__"]

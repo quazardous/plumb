@@ -4,6 +4,8 @@ All notable changes to this project are documented here: what changed for a user
 
 ## [Unreleased]
 
+## [0.2.1]
+
 - Published on PyPI as `plumb-q` (`pip install plumb-q`).
 
 ## [0.2.0]
