@@ -16,6 +16,14 @@ orders = container.get("app.orders", account="fr")
 
 One dependency (PyYAML), no framework required. Python 3.10+. MIT.
 
+## Install
+
+```bash
+pip install plumb-q        # or: uv add plumb-q
+```
+
+The package is `plumb-q` on PyPI; the module is `quazardous.plumb`.
+
 ## Why
 
 Python dependency-injection libraries declare services in code (decorators, container classes).

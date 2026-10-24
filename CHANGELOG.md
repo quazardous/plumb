@@ -4,6 +4,8 @@ All notable changes to this project are documented here: what changed for a user
 
 ## [Unreleased]
 
+- Published on PyPI as `plumb-q` (`pip install plumb-q`).
+
 ## [0.2.0]
 
 - `Container.target(id)` gives what a service is built from (its class or factory), without building it:

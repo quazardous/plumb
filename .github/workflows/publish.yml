@@ -1,0 +1,48 @@
+# Publishes plumb-q to PyPI when a v* tag is pushed, through trusted publishing (no token stored).
+# The tag must match the package version (quazardous.plumb.__version__).
+name: publish
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.10", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv run --python ${{ matrix.python }} --with pytest --with pyyaml pytest
+      - run: uv run --with ruff ruff check
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Tag matches the package version
+        run: |
+          version=$(sed -n 's/^__version__ = "\(.*\)"/\1/p' src/quazardous/plumb/__init__.py)
+          test "v$version" = "$GITHUB_REF_NAME" || { echo "tag $GITHUB_REF_NAME != version $version"; exit 1; }
+      - run: uv build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
