@@ -1,0 +1,50 @@
+parameters:
+  api.url: 'https://%host%/api'
+  api.verify: '%tls_verify%'
+  orders.api: '%shop.orders_api%'
+
+services:
+  _defaults: { autowire: true }
+
+  app.transport:
+    class: sample.app.HttpTransport
+    arguments: { base_url: '%api.url%', verify: '%api.verify%' }
+  sample.app.Transport: '@app.transport'
+
+  app.orders.v1:
+    class: sample.app.Orders
+    shared: false
+    runtime: [account]
+    tags: [{ name: orders_source, version: v1 }]
+  app.orders.v0:
+    class: sample.app.OrdersV0
+    shared: false
+    runtime: [account]
+    arguments: { page_size: 50 }
+    tags: [{ name: orders_source, version: v0 }]
+
+  app.normalizer.v0:
+    class: sample.app.Normalizer
+    arguments: [v0]
+    tags: [normalizer]
+  app.normalizer.v1:
+    class: sample.app.Normalizer
+    arguments: [v1]
+    tags: [normalizer]
+  app.registry:
+    class: sample.app.Registry
+    arguments: [!tagged_iterator normalizer]
+
+  app.greeting:
+    factory: sample.app.make_greeting
+    arguments: ['%user%', '@@']
+  app.greeter_factory:
+    class: sample.app.Factory
+    arguments: ['%%prefix: ']
+  app.greeting2:
+    factory: ['@app.greeter_factory', create]
+    arguments: [world]
+
+when@test:
+  services:
+    app.transport: { class: sample.app.FakeTransport }
